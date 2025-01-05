@@ -8,8 +8,10 @@ int main(){
     lr1.DFA();
     lr1.printDFA();
     lr1.judgeLR1();
-    lr1.parstTable();
+    lr1.parseTable();
     lr1.printParseTable();
+    lr1.inputContent("input.txt");
+    lr1.parseInput();
 
     return 0;
 }

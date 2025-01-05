@@ -42,6 +42,8 @@ private:
     unordered_set<string> Action;
     unordered_set<string> Goto;
     vector<map<string, string>> parse;
+    string input;
+    
 
 public:
     //读取文法到map
@@ -89,7 +91,8 @@ public:
         headProd = {headSymbol};
     }
     void DFA(){
-        LR1Item startItem = {head, headProd, 0, "$"};
+        //LR1Item startItem = {head, headProd, 0, "$"};
+        LR1Item startItem = {head, headProd, 0, "#"};
         vector<LR1Item> startState = computeClosure({startItem});
         states.push_back(startState);
         queue<int> stateQueue;
@@ -241,7 +244,7 @@ public:
                 set<string> shaftLookAhead;
                 set<string> reductionLookAhead;
                 for(int index : shaftIndex){
-                    shaftLookAhead.insert(states[i][index].lookAhead);
+                    shaftLookAhead.insert(states[i][index].right[states[i][index].dotPosition]);
                 }
                 for(int index : reductionIndex){
                     reductionLookAhead.insert(states[i][index].lookAhead);
@@ -308,7 +311,7 @@ public:
             exit(1);
         }
     }
-    void parstTable(){
+    void parseTable(){
         for(const auto &pair : grammer){
             if(pair.first != head){
                 Goto.insert(pair.first);
@@ -380,9 +383,9 @@ public:
         for(int i = 0; i < states.size(); i++){
             cout << "I" << i << "   "; 
             for(string ac : Action){
-                if(ac == "#"){
-                    ac = "$";
-                }
+                // if(ac == "#"){
+                //     ac = "$";
+                // }
                 if(parse[i].find(ac) != parse[i].end()){
                     cout << setw(10) << parse[i][ac];
                 }else{
@@ -399,5 +402,115 @@ public:
             }
             cout << "\n";
         }
+    }
+    void inputContent(string inputPath){
+        ifstream in(inputPath);
+        if(!in.is_open()){
+            cerr << "文件未正常打开";
+            return;
+        }
+        
+        getline(in, input);
+        cout << "输入句子为：" << input << "\n";
+
+    }
+    void parseInput(){
+        string inputTemp = input;
+        inputTemp.push_back('#');
+        vector<string> parseState;
+        vector<string> parseSymbol;
+        parseState.push_back("0");
+        parseSymbol.push_back("#");
+        cout << std::left << setw(20) << "StateStake" 
+        << std::left << setw(20) << "SymbolStake" 
+        << setw(20) << "Input" 
+        << std::left << setw(20) << "Action" 
+        << std::left << setw(20) << "Goto";
+        cout << "\n";
+        string parseAction;
+        string parseGoto;
+        bool flag = false;
+        while(parseAction != "acc"){
+            cout << std::left << setw(20) << vectorToString(parseState);
+            cout << std::left << setw(20) << vectorToString(parseSymbol);
+            cout << setw(20) << inputTemp;
+
+            //获取状态栈顶
+            string stateTop = parseState.back();
+            //获取输入串当前头部
+            string inputPoint;
+            inputPoint.push_back(inputTemp[0]);
+            
+            
+            if(parse[stateTop[0] - '0'].count(inputPoint)){
+                string nextAction = parse[stateTop[0] - '0'][inputPoint];
+                if(nextAction == "acc"){
+                    parseAction = "acc";
+                    cout << std::left << setw(20) << parseAction;
+                    cout << "\n";
+                    flag = true;
+                    break;
+                }else if(nextAction.size() > 2 && nextAction != "acc"){
+                    //归约
+                    istringstream iss(nextAction);
+                    string left, right, arrow;
+                    iss >> left >> arrow >> right;
+                    int length = grammer[left][right[0] - '0'].size();
+                    while(length > 0){
+                        parseState.pop_back();
+                        parseSymbol.pop_back();
+                        length--;
+                    }
+                    parseSymbol.push_back(left);
+                    parseAction = nextAction;
+                    stateTop = parseState.back();
+                    string nextGoto = parse[stateTop[0] - '0'][left];
+                    parseGoto = nextGoto;
+                    parseState.push_back(nextGoto);
+
+                }else{
+                    //移进
+                    parseSymbol.push_back(inputPoint);
+                    inputTemp.erase(0, 1);
+
+                    parseAction = nextAction;
+                    parseGoto = " ";
+                    nextAction.erase(0, 1);
+                    parseState.push_back(nextAction);
+                }
+                cout << std::left << setw(20) << parseAction 
+                    << std::left << setw(20) << parseGoto;
+                cout << "\n";
+            }else{
+                cout << "\n分析表无法找到当前状态的Action\n";
+                cout << "错误类型：遇到未期望的字符" << inputTemp[0];
+                cout << ", 位置在" << input.size() - inputTemp.size() + 1 << "\n";
+                stateTop = parseState.back();
+                string expectedSymbol;
+                for(const auto &pair : parse[stateTop[0] - '0']){
+                    if(!grammer.count(pair.first)){
+                        if(expectedSymbol.empty()){
+                            expectedSymbol = pair.first;
+                        }else{
+                            expectedSymbol += "," + pair.first;
+                        }
+                    }
+                }
+                cout << "修改建议：期待的字符为" << expectedSymbol;
+                break;
+            }
+
+        }
+        if(flag){
+            cout << "合法输入,该输入内容符合LR1文法";
+        }
+
+    }
+    string vectorToString(vector<string> content){
+        ostringstream oss;
+        for(const string &str : content){
+            oss << str;
+        }
+        return oss.str();
     }
 };
