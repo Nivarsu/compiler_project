@@ -1,4 +1,2 @@
-A -> C a
 A -> B a
-C -> c
 B -> c

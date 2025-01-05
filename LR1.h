@@ -7,6 +7,7 @@
 #include<unordered_set>
 #include<algorithm>
 #include<set>
+#include <iomanip>
 
 using namespace std;
 
@@ -38,6 +39,9 @@ private:
     vector<vector<LR1Item>> states;
     //状态转换记录
     map<pair<int, string>, int> transitions;
+    unordered_set<string> Action;
+    unordered_set<string> Goto;
+    vector<map<string, string>> parse;
 
 public:
     //读取文法到map
@@ -216,6 +220,7 @@ public:
 
     //判断lr1文法
     void judgeLR1(){
+        bool judge = false;
         for(int i = 0; i < states.size(); i++){
             bool hasShaft = false;
             bool hasReduction = false;
@@ -244,6 +249,7 @@ public:
                 vector<string> interSection;
                 set_intersection(shaftLookAhead.begin(), shaftLookAhead.end(), reductionLookAhead.begin(), reductionLookAhead.end(), back_inserter(interSection));
                 if(interSection.size() != 0){
+                    judge = true;
                     cout << "状态I" << i << "存在移进-归约冲突\n";
                     cout << "冲突向前搜索符为" << interSection[0];
                     for(int index = 1; index < interSection.size(); index++){
@@ -268,6 +274,7 @@ public:
                         vector<string> interSection;
                         set_intersection(pairi.second.begin(), pairi.second.end(), pairj.second.begin(), pairj.second.end(), back_inserter(interSection));
                         if(interSection.size() != 0){
+                            judge = true;
                             cout << "状态I" << i << " 存在归约-归约冲突项目\n";
 
                             cout << pairi.first.left << " -> ";
@@ -295,6 +302,102 @@ public:
                     }
                 }
             }
+        }
+        if(judge){
+            cout << "该文法不是LR1文法";
+            exit(1);
+        }
+    }
+    void parstTable(){
+        for(const auto &pair : grammer){
+            if(pair.first != head){
+                Goto.insert(pair.first);
+            }
+        }
+        for(const auto &pair : grammer){
+            if(pair.first == head){
+                continue;
+            }
+            vector<vector<string>> prodTotal = pair.second;
+            for(const vector<string> &prod : prodTotal){
+                for(const string temp : prod){
+                    if(!Goto.count(temp)){
+                        Action.insert(temp);
+                    }
+                }
+            }
+        }
+        Action.insert("#");
+        parse.resize(states.size());
+        for(const auto &transition : transitions){
+            int stateIndex = transition.first.first;
+            string symbol = transition.first.second;
+            int nextState = transition.second;
+            if(grammer.count(symbol)){
+                parse[stateIndex][symbol] = to_string(nextState);
+            }else{
+                parse[stateIndex][symbol] = "s" + to_string(nextState);
+            }
+        }
+        for(int i = 0; i < states.size(); i++){
+            for(const LR1Item &item : states[i]){
+                //归约项目
+                if(item.left == head && item.right == headProd && item.dotPosition == 1){
+                    parse[i][item.lookAhead] = "acc";
+                    continue;
+                }
+                if(item.dotPosition == item.right.size()){
+                    parse[i][item.lookAhead] = item.left + " -> ";
+                    int prodIndex;
+                    for(int index = 0; index < grammer[item.left].size(); index++){
+                        vector<string> prod = grammer[item.left][index];
+                        if(prod == item.right){
+                            prodIndex = index;
+                            break;
+                        }
+                    }
+                    parse[i][item.lookAhead] += to_string(prodIndex);
+                }
+            }
+        }
+    }
+    void printParseTable(){
+        cout << "LR1分析表\n";
+        cout << "     ";
+        cout << setw(Action.size() * 10) << "Action";
+        cout << " | ";
+        cout << setw(Goto.size() * 10) << "Goto";
+        cout << "\n";
+        cout << "     ";
+        for(const auto &item : Action){
+            cout << setw(10) << item;
+        }
+        cout << " | ";
+        for(const auto &item : Goto){
+            cout << setw(10) << item;
+        }
+        cout << "\n";
+        for(int i = 0; i < states.size(); i++){
+            cout << "I" << i << "   "; 
+            for(string ac : Action){
+                if(ac == "#"){
+                    ac = "$";
+                }
+                if(parse[i].find(ac) != parse[i].end()){
+                    cout << setw(10) << parse[i][ac];
+                }else{
+                    cout << setw(10) << " ";
+                }
+            }
+            cout << " | ";
+            for(string ac : Goto){
+                if(parse[i].find(ac) != parse[i].end()){
+                    cout << setw(10) << parse[i][ac];
+                }else{
+                    cout << setw(10) << " ";
+                }
+            }
+            cout << "\n";
         }
     }
 };
