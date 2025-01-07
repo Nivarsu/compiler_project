@@ -442,8 +442,10 @@ public:
             inputPoint.push_back(inputTemp[0]);
             
             
-            if(parse[stateTop[0] - '0'].count(inputPoint)){
-                string nextAction = parse[stateTop[0] - '0'][inputPoint];
+            //if(parse[stateTop[0] - '0'].count(inputPoint)){
+            if(parse[stringToInt(stateTop)].count(inputPoint)){
+                //string nextAction = parse[stateTop[0] - '0'][inputPoint];
+                string nextAction = parse[stringToInt(stateTop)][inputPoint];
                 if(nextAction == "acc"){
                     parseAction = "acc";
                     cout << std::left << setw(20) << parseAction;
@@ -455,7 +457,8 @@ public:
                     istringstream iss(nextAction);
                     string left, right, arrow;
                     iss >> left >> arrow >> right;
-                    int length = grammer[left][right[0] - '0'].size();
+                    //int length = grammer[left][right[0] - '0'].size();
+                    int length = grammer[left][stringToInt(right)].size();
                     while(length > 0){
                         parseState.pop_back();
                         parseSymbol.pop_back();
@@ -464,7 +467,9 @@ public:
                     parseSymbol.push_back(left);
                     parseAction = nextAction;
                     stateTop = parseState.back();
-                    string nextGoto = parse[stateTop[0] - '0'][left];
+                    //string nextGoto = parse[stateTop[0] - '0'][left];
+                    int num = stringToInt(stateTop);
+                    string nextGoto = parse[num][left];
                     parseGoto = nextGoto;
                     parseState.push_back(nextGoto);
 
@@ -487,7 +492,8 @@ public:
                 cout << ", 位置在" << input.size() - inputTemp.size() + 1 << "\n";
                 stateTop = parseState.back();
                 string expectedSymbol;
-                for(const auto &pair : parse[stateTop[0] - '0']){
+                //for(const auto &pair : parse[stateTop[0] - '0']){
+                for(const auto &pair : parse[stringToInt(stateTop)]){
                     if(!grammer.count(pair.first)){
                         if(expectedSymbol.empty()){
                             expectedSymbol = pair.first;
@@ -512,5 +518,14 @@ public:
             oss << str;
         }
         return oss.str();
+    }
+    int stringToInt(string str){
+        int num = 0;
+        int index = 1;
+        for(int i = 0; i < str.size(); i++){
+            num += index * (str[i] - '0');
+            index *= 10;
+        }
+        return num;
     }
 };
